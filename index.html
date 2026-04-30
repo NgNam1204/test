@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Ảnh lớp</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 40px;
+      border-left: 5px solid #333;
+      padding-left: 10px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    img, video {
+      width: 100%;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    /* Lightbox */
+    #lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #lightbox img, #lightbox video {
+      max-width: 90%;
+      max-height: 90%;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>📸 Thư viện ảnh lớp</h1>
+<div id="app"></div>
+
+<div id="lightbox" onclick="this.style.display='none'"></div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyNRkU30374l06MSjv5WUjB51_H-NIhcXFT3tzvHQgJmp-MhgHAuJ3llIDHSKgZ9H52/exec";
+
+async function loadData() {
+  const res = await fetch(API_URL);
+  const data = await res.json();
+
+  const app = document.getElementById("app");
+
+  data.forEach(section => {
+    const title = document.createElement("h2");
+    title.textContent = section.folder;
+
+    const gallery = document.createElement("div");
+    gallery.className = "gallery";
+
+    section.images.forEach(item => {
+      let el;
+
+      // Detect video
+      if (item.name.endsWith(".mp4") || item.name.endsWith(".MOV")) {
+        el = document.createElement("video");
+        el.src = item.url;
+        el.controls = true;
+      } else {
+        el = document.createElement("img");
+        el.src = item.url;
+      }
+
+      el.onclick = () => openLightbox(item);
+
+      gallery.appendChild(el);
+    });
+
+    app.appendChild(title);
+    app.appendChild(gallery);
+  });
+}
+
+function openLightbox(item) {
+  const box = document.getElementById("lightbox");
+  box.innerHTML = "";
+
+  let el;
+  if (item.name.endsWith(".mp4") || item.name.endsWith(".MOV")) {
+    el = document.createElement("video");
+    el.src = item.url;
+    el.controls = true;
+    el.autoplay = true;
+  } else {
+    el = document.createElement("img");
+    el.src = item.url;
+  }
+
+  box.appendChild(el);
+  box.style.display = "flex";
+}
+
+loadData();
+</script>
+
+</body>
+</html>
