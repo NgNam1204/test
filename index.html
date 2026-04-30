@@ -2,11 +2,11 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Ảnh lớp</title>
+  <title>Thư viện ảnh lớp</title>
 
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       margin: 20px;
       background: #f5f5f5;
     }
@@ -24,16 +24,21 @@
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
+      gap: 12px;
     }
 
     img, video {
       width: 100%;
       border-radius: 10px;
       cursor: pointer;
+      object-fit: cover;
+      transition: transform 0.2s;
     }
 
-    /* Lightbox */
+    img:hover, video:hover {
+      transform: scale(1.03);
+    }
+
     #lightbox {
       position: fixed;
       top: 0;
@@ -44,11 +49,21 @@
       display: none;
       justify-content: center;
       align-items: center;
+      z-index: 999;
     }
 
-    #lightbox img, #lightbox video {
+    #lightbox img,
+    #lightbox video {
       max-width: 90%;
       max-height: 90%;
+      border-radius: 10px;
+    }
+
+    #loading {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 18px;
+      color: #666;
     }
   </style>
 </head>
@@ -56,6 +71,7 @@
 <body>
 
 <h1>📸 Thư viện ảnh lớp</h1>
+<div id="loading">Đang tải dữ liệu...</div>
 <div id="app"></div>
 
 <div id="lightbox" onclick="this.style.display='none'"></div>
@@ -64,47 +80,59 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbyNRkU30374l06MSjv5WUjB51_H-NIhcXFT3tzvHQgJmp-MhgHAuJ3llIDHSKgZ9H52/exec";
 
 async function loadData() {
-  const res = await fetch(API_URL);
-  const data = await res.json();
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
-  const app = document.getElementById("app");
+    document.getElementById("loading").style.display = "none";
 
-  data.forEach(section => {
-    const title = document.createElement("h2");
-    title.textContent = section.folder;
+    const app = document.getElementById("app");
 
-    const gallery = document.createElement("div");
-    gallery.className = "gallery";
+    data.forEach(section => {
+      const title = document.createElement("h2");
+      title.textContent = section.folder;
 
-    section.images.forEach(item => {
-      let el;
+      const gallery = document.createElement("div");
+      gallery.className = "gallery";
 
-      // Detect video
-      if (item.name.endsWith(".mp4") || item.name.endsWith(".MOV")) {
-        el = document.createElement("video");
-        el.src = item.url;
-        el.controls = true;
-      } else {
-        el = document.createElement("img");
-        el.src = item.url;
-      }
+      section.images.forEach(item => {
+        const name = item.name.toLowerCase();
+        let el;
 
-      el.onclick = () => openLightbox(item);
+        if (name.match(/\.(mp4|mov|webm)$/)) {
+          el = document.createElement("video");
+          el.src = item.url;
+          el.controls = true;
+        } else if (name.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+          el = document.createElement("img");
+          el.src = item.url;
+          el.loading = "lazy";
+        } else {
+          return;
+        }
 
-      gallery.appendChild(el);
+        el.onclick = () => openLightbox(item);
+        gallery.appendChild(el);
+      });
+
+      app.appendChild(title);
+      app.appendChild(gallery);
     });
 
-    app.appendChild(title);
-    app.appendChild(gallery);
-  });
+  } catch (err) {
+    document.getElementById("loading").innerText = "Lỗi tải dữ liệu!";
+    console.error(err);
+  }
 }
 
 function openLightbox(item) {
   const box = document.getElementById("lightbox");
   box.innerHTML = "";
 
+  const name = item.name.toLowerCase();
   let el;
-  if (item.name.endsWith(".mp4") || item.name.endsWith(".MOV")) {
+
+  if (name.match(/\.(mp4|mov|webm)$/)) {
     el = document.createElement("video");
     el.src = item.url;
     el.controls = true;
