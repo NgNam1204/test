@@ -1,152 +1,167 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Thư viện ảnh lớp</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kỷ Yếu 12A4</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f5f5f5;
-    }
+<style>
+body { font-family: Arial; margin:0; background:#f5f5f5; }
 
-    h1 {
-      text-align: center;
-    }
+h1 { text-align:center; padding:20px; }
 
-    h2 {
-      margin-top: 40px;
-      border-left: 5px solid #333;
-      padding-left: 10px;
-    }
+.gallery {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:10px;
+  padding:20px;
+}
 
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
+img {
+  width:100%;
+  border-radius:10px;
+  cursor:pointer;
+  object-fit:cover;
+}
 
-    img, video {
-      width: 100%;
-      border-radius: 10px;
-      cursor: pointer;
-      object-fit: cover;
-      transition: transform 0.2s;
-    }
+/* LIGHTBOX */
+#lightbox {
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.95);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:999;
+}
 
-    img:hover, video:hover {
-      transform: scale(1.03);
-    }
+#lightbox img {
+  max-width:90%;
+  max-height:80%;
+  object-fit:contain;
+  transition:0.3s;
+}
 
-    #lightbox {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-    }
+.controls {
+  position:absolute;
+  top:50%;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  padding:0 20px;
+  color:white;
+  font-size:2rem;
+  cursor:pointer;
+}
 
-    #lightbox img,
-    #lightbox video {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 10px;
-    }
+.close {
+  position:absolute;
+  top:20px;
+  right:30px;
+  color:white;
+  font-size:2rem;
+  cursor:pointer;
+}
 
-    #loading {
-      text-align: center;
-      margin-top: 50px;
-      font-size: 18px;
-      color: #666;
-    }
-  </style>
+.download {
+  position:absolute;
+  bottom:30px;
+  background:white;
+  padding:10px 20px;
+  border-radius:20px;
+  cursor:pointer;
+}
+</style>
 </head>
 
 <body>
 
 <h1>📸 Thư viện ảnh lớp</h1>
-<div id="loading">Đang tải dữ liệu...</div>
-<div id="app"></div>
+<div class="gallery" id="gallery"></div>
 
-<div id="lightbox" onclick="this.style.display='none'"></div>
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <div class="close" onclick="closeBox()">✕</div>
+
+  <div class="controls">
+    <span onclick="prev()">⟨</span>
+    <span onclick="next()">⟩</span>
+  </div>
+
+  <img id="view">
+
+  <div class="download" onclick="download()">⬇ Tải ảnh</div>
+</div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwg5SQ5R6E9chRaTGVGMbTUleup33u4F9usvltpLDlMhHWxw2QEKk9VVBxuGEL8hpHq/exec";
+const API = "https://script.google.com/macros/s/AKfycbwg5SQ5R6E9chRaTGVGMbTUleup33u4F9usvltpLDlMhHWxw2QEKk9VVBxuGEL8hpHq/exec";
 
-async function loadData() {
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+let imgs = [];
+let current = 0;
 
-    document.getElementById("loading").style.display = "none";
+async function load() {
+  const res = await fetch(API);
+  const data = await res.json();
 
-    const app = document.getElementById("app");
+  const gallery = document.getElementById("gallery");
 
-    data.forEach(section => {
-      const title = document.createElement("h2");
-      title.textContent = section.folder;
-
-      const gallery = document.createElement("div");
-      gallery.className = "gallery";
-
-      section.images.forEach(item => {
-        const name = item.name.toLowerCase();
-        let el;
-
-        if (name.match(/\.(mp4|mov|webm)$/)) {
-          el = document.createElement("video");
-          el.src = item.url;
-          el.controls = true;
-        } else if (name.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-          el = document.createElement("img");
-          el.src = item.url;
-          el.loading = "lazy";
-        } else {
-          return;
-        }
-
-        el.onclick = () => openLightbox(item);
-        gallery.appendChild(el);
-      });
-
-      app.appendChild(title);
-      app.appendChild(gallery);
+  data.forEach(section => {
+    section.images.forEach(item => {
+      imgs.push(item.url);
     });
+  });
 
-  } catch (err) {
-    document.getElementById("loading").innerText = "Lỗi tải dữ liệu!";
-    console.error(err);
-  }
+  imgs.forEach((url, i) => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.onclick = () => open(i);
+    gallery.appendChild(img);
+  });
 }
 
-function openLightbox(item) {
-  const box = document.getElementById("lightbox");
-  box.innerHTML = "";
-
-  const name = item.name.toLowerCase();
-  let el;
-
-  if (name.match(/\.(mp4|mov|webm)$/)) {
-    el = document.createElement("video");
-    el.src = item.url;
-    el.controls = true;
-    el.autoplay = true;
-  } else {
-    el = document.createElement("img");
-    el.src = item.url;
-  }
-
-  box.appendChild(el);
-  box.style.display = "flex";
+function open(i) {
+  current = i;
+  show();
+  document.getElementById("lightbox").style.display = "flex";
 }
 
-loadData();
+function show() {
+  const img = document.getElementById("view");
+  img.src = imgs[current];
+  img.style.transform = "scale(1)";
+}
+
+function next() {
+  current = (current + 1) % imgs.length;
+  show();
+}
+
+function prev() {
+  current = (current - 1 + imgs.length) % imgs.length;
+  show();
+}
+
+function closeBox() {
+  document.getElementById("lightbox").style.display = "none";
+}
+
+function download() {
+  const a = document.createElement("a");
+  a.href = imgs[current];
+  a.download = "image.jpg";
+  a.click();
+}
+
+/* zoom bằng click */
+document.getElementById("view").onclick = function() {
+  this.style.transform =
+    this.style.transform === "scale(2)" ? "scale(1)" : "scale(2)";
+};
+
+load();
 </script>
 
 </body>
