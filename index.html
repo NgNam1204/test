@@ -3,12 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kỷ Yếu 12A4</title>
+<title>Thư viện ảnh lớp</title>
 
 <style>
-body { font-family: Arial; margin:0; background:#f5f5f5; }
+body {
+  margin:0;
+  font-family: Arial;
+  background:#f5f5f5;
+}
 
-h1 { text-align:center; padding:20px; }
+h1 {
+  text-align:center;
+  padding:20px;
+}
 
 .gallery {
   display:grid;
@@ -17,7 +24,7 @@ h1 { text-align:center; padding:20px; }
   padding:20px;
 }
 
-img {
+.gallery img {
   width:100%;
   border-radius:10px;
   cursor:pointer;
@@ -34,35 +41,45 @@ img {
   display:none;
   justify-content:center;
   align-items:center;
-  flex-direction:column;
+  overflow:hidden;
   z-index:999;
 }
 
-#lightbox img {
+#view {
   max-width:90%;
-  max-height:80%;
+  max-height:90%;
   object-fit:contain;
-  transition:0.3s;
+  transition: transform 0.1s;
+  cursor: grab;
 }
 
-.controls {
+/* controls */
+.controls span {
   position:absolute;
   top:50%;
-  width:100%;
-  display:flex;
-  justify-content:space-between;
-  padding:0 20px;
+  transform:translateY(-50%);
+  font-size:3.5rem;
   color:white;
-  font-size:2rem;
+  background:rgba(0,0,0,0.4);
+  padding:15px 25px;
+  border-radius:10px;
   cursor:pointer;
+  user-select:none;
+}
+
+#prev { left:20px; }
+#next { right:20px; }
+
+.controls span:hover {
+  background:rgba(255,255,255,0.3);
 }
 
 .close {
   position:absolute;
   top:20px;
   right:30px;
-  color:white;
   font-size:2rem;
+  color:white;
   cursor:pointer;
 }
 
@@ -87,8 +104,8 @@ img {
   <div class="close" onclick="closeBox()">✕</div>
 
   <div class="controls">
-    <span onclick="prev()">⟨</span>
-    <span onclick="next()">⟩</span>
+    <span id="prev" onclick="prev()">⟨</span>
+    <span id="next" onclick="next()">⟩</span>
   </div>
 
   <img id="view">
@@ -101,6 +118,10 @@ const API = "https://script.google.com/macros/s/AKfycbwg5SQ5R6E9chRaTGVGMbTUleup
 
 let imgs = [];
 let current = 0;
+let scale = 1;
+let posX = 0, posY = 0;
+let isDragging = false;
+let startX, startY;
 
 async function load() {
   const res = await fetch(API);
@@ -110,7 +131,7 @@ async function load() {
 
   data.forEach(section => {
     section.images.forEach(item => {
-      imgs.push(item.url);
+      imgs.push(item.url + "=s3000"); // 🔥 ảnh nét
     });
   });
 
@@ -131,7 +152,17 @@ function open(i) {
 function show() {
   const img = document.getElementById("view");
   img.src = imgs[current];
-  img.style.transform = "scale(1)";
+
+  scale = 1;
+  posX = 0;
+  posY = 0;
+
+  updateTransform();
+}
+
+function updateTransform() {
+  const img = document.getElementById("view");
+  img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
 }
 
 function next() {
@@ -155,11 +186,60 @@ function download() {
   a.click();
 }
 
-/* zoom bằng click */
-document.getElementById("view").onclick = function() {
-  this.style.transform =
-    this.style.transform === "scale(2)" ? "scale(1)" : "scale(2)";
-};
+/* ZOOM bằng con lăn */
+const imgView = document.getElementById("view");
+
+imgView.addEventListener("wheel", function(e) {
+  e.preventDefault();
+
+  const zoomSpeed = 0.1;
+
+  if (e.deltaY < 0) {
+    scale += zoomSpeed;
+  } else {
+    scale -= zoomSpeed;
+  }
+
+  if (scale < 1) scale = 1;
+  if (scale > 5) scale = 5;
+
+  updateTransform();
+}, { passive: false });
+
+/* CHẶN SCROLL */
+document.getElementById("lightbox").addEventListener("wheel", function(e) {
+  e.preventDefault();
+}, { passive: false });
+
+/* DRAG ẢNH */
+imgView.addEventListener("mousedown", e => {
+  isDragging = true;
+  startX = e.clientX - posX;
+  startY = e.clientY - posY;
+  imgView.style.cursor = "grabbing";
+});
+
+window.addEventListener("mousemove", e => {
+  if (!isDragging) return;
+
+  posX = e.clientX - startX;
+  posY = e.clientY - startY;
+
+  updateTransform();
+});
+
+window.addEventListener("mouseup", () => {
+  isDragging = false;
+  imgView.style.cursor = "grab";
+});
+
+/* DOUBLE CLICK RESET */
+imgView.addEventListener("dblclick", () => {
+  scale = 1;
+  posX = 0;
+  posY = 0;
+  updateTransform();
+});
 
 load();
 </script>
