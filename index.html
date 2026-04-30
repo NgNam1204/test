@@ -124,23 +124,29 @@ let isDragging = false;
 let startX, startY;
 
 async function load() {
-  const res = await fetch(API);
-  const data = await res.json();
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
 
-  const gallery = document.getElementById("gallery");
+    const gallery = document.getElementById("gallery");
 
-  data.forEach(section => {
-    section.images.forEach(item => {
-      imgs.push(item.url + "=s3000"); // 🔥 ảnh nét
+    data.forEach(section => {
+      section.images.forEach(item => {
+        imgs.push(item.url); // ✅ KHÔNG thêm =s3000 nữa
+      });
     });
-  });
 
-  imgs.forEach((url, i) => {
-    const img = document.createElement("img");
-    img.src = url;
-    img.onclick = () => open(i);
-    gallery.appendChild(img);
-  });
+    imgs.forEach((url, i) => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.onclick = () => open(i);
+      gallery.appendChild(img);
+    });
+
+  } catch (err) {
+    document.body.innerHTML = "<h2 style='text-align:center'>❌ Lỗi load API</h2>";
+    console.error(err);
+  }
 }
 
 function open(i) {
@@ -194,11 +200,8 @@ imgView.addEventListener("wheel", function(e) {
 
   const zoomSpeed = 0.1;
 
-  if (e.deltaY < 0) {
-    scale += zoomSpeed;
-  } else {
-    scale -= zoomSpeed;
-  }
+  if (e.deltaY < 0) scale += zoomSpeed;
+  else scale -= zoomSpeed;
 
   if (scale < 1) scale = 1;
   if (scale > 5) scale = 5;
@@ -211,7 +214,7 @@ document.getElementById("lightbox").addEventListener("wheel", function(e) {
   e.preventDefault();
 }, { passive: false });
 
-/* DRAG ẢNH */
+/* DRAG */
 imgView.addEventListener("mousedown", e => {
   isDragging = true;
   startX = e.clientX - posX;
@@ -221,10 +224,8 @@ imgView.addEventListener("mousedown", e => {
 
 window.addEventListener("mousemove", e => {
   if (!isDragging) return;
-
   posX = e.clientX - startX;
   posY = e.clientY - startY;
-
   updateTransform();
 });
 
